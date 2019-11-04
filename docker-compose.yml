@@ -1,0 +1,66 @@
+version: "3"
+services:
+  nginx:
+    build:
+      context: ./build/nginx
+      args:
+        NGINX_VERSION: ${NGINX_VERSION}
+    ports:
+      - "${NGINX_HTTP_HOST_PORT}:80"
+      - "${NGINX_HTTPS_HOST_PORT}:443"
+    volumes:
+      - ${SOURCE_DIR}:/var/www/html/:rw
+      - ${NGINX_CONF_SITES}:/etc/nginx/sites-enabled/:rw
+      - ${NGINX_CONF_FILE}:/etc/nginx/nginx.conf:ro
+      - ${NGINX_LOG_DIR}:/var/log/:rw
+    restart: always
+    networks:
+      - front
+      - backend
+
+  php72:
+    build:
+      context: ./build/php
+    volumes:
+      - ${SOURCE_DIR}:/var/www/html/:rw
+      - ${PHP72_PHP_CONF_FILE}:/usr/local/etc/php/php.ini:ro
+      - ${PHP72_FPM_CONF_FILE}:/usr/local/etc/php-fpm.d/www.conf:rw
+      - ${PHP72_LOG_DIR}:/var/log/:rw
+    restart: always
+    cap_add:
+      - SYS_PTRACE
+    networks:
+      - backend
+
+  mysql:
+    image: mysql:${MYSQL_VERSION}
+    ports:
+      - "${MYSQL_HOST_PORT}:3306"
+    volumes:
+      - ${MYSQL_CONF_FILE}:/etc/mysql/conf.d/mysql.cnf:ro
+      - ${MYSQL_DATA_DIR}:/var/lib/mysql:rw
+      - ${MYSLQ_LOG_DIR}:/var/log/:rw
+    restart: always
+    networks:
+      - backend
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+
+  redis:
+    build:
+      context: ./build/redis
+      args:
+        REIDS_DOCKER_DATA_DIR: ${REIDS_DOCKER_DATA_DIR}
+        REDIS_VERSION: ${REDIS_VERSION}
+    ports:
+      - "${REDIS_HOST_PORT}:6379"
+    volumes:
+      - ${REDIS_CONF_FILE}:/etc/redis.conf:ro
+      - ${REDIS_DATA_DIR}:${REIDS_DOCKER_DATA_DIR}:rw
+      - ${REIDS_LOG_DIR}:/var/log/:rw
+    restart: always
+    networks:
+      - backend
+networks:
+  front:
+  backend:
